@@ -3,7 +3,11 @@ import yt_dlp
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 
-BOT_TOKEN = "7569569536:AAGdPRShZ6SfQFhwFt09TSOcgoupBWodjsI"
+# Replace with your actual bot token
+BOT_TOKEN = "PASTE_YOUR_BOT_TOKEN_HERE"
+
+DOWNLOAD_DIR = "downloads"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
@@ -11,23 +15,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Please send a valid Instagram or YouTube link.")
         return
 
-    await update.message.reply_text("⏳ Downloading... Please wait...")
+    await update.message.reply_text("⏳ Downloading video... Please wait...")
+
+    filename = os.path.join(DOWNLOAD_DIR, f"{update.message.message_id}.mp4")
 
     ydl_opts = {
-        'quiet': True,
         'format': 'best[ext=mp4]/best',
-        'skip_download': True,
-        'noplaylist': True,
+        'outtmpl': filename,
+        'quiet': True,
+        'noplaylist': True
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            download_url = info.get("url")
-            title = info.get("title", "Your video")
-            await update.message.reply_text(f"✅ {title}\n📥 Download Link:\n{download_url}")
+            ydl.download([url])
+
+        await update.message.reply_video(video=open(filename, 'rb'))
+        os.remove(filename)
     except Exception as e:
-        await update.message.reply_text("❌ Error: Could not fetch the video. It might be private or unsupported.")
+        await update.message.reply_text("❌ Failed to download or send the video.")
         print("Error:", e)
 
 if __name__ == '__main__':
